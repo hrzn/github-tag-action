@@ -3,15 +3,16 @@
 set -o pipefail
 
 # config
-default_semvar_bump=${DEFAULT_BUMP:-minor}
+default_semvar_bump=${DEFAULT_BUMP:-none}
 with_v=${WITH_V:-false}
 release_branches=${RELEASE_BRANCHES:-master}
 custom_tag=${CUSTOM_TAG}
 source=${SOURCE:-.}
-dryrun=${DRY_RUN:-false}
+dryrun=${DRY_RUN:-true}
 initial_version=${INITIAL_VERSION:-0.0.0}
 tag_context=${TAG_CONTEXT:-repo}
 suffix=${PRERELEASE_SUFFIX:-beta}
+bump_type=${BUMP_TYPE}
 
 cd ${GITHUB_WORKSPACE}/${source}
 
@@ -58,11 +59,8 @@ esac
 # if there are none, start tags at INITIAL_VERSION which defaults to 0.0.0
 if [ -z "$tag" ]
 then
-    log=$(git log --pretty='%B')
     tag="$initial_version"
     pre_tag="$initial_version"
-else
-    log=$(git log $tag..HEAD --pretty='%B')
 fi
 
 # get current commit hash for tag
@@ -74,18 +72,16 @@ commit=$(git rev-parse HEAD)
 if [ "$tag_commit" == "$commit" ]; then
     echo "No new commits since previous tag. Skipping..."
     echo ::set-output name=tag::$tag
-    exit 0
+    exit 1
 fi
 
-echo $log
-
-case "$log" in
+case "$bump_type" in
     *#major* ) new=$(semver -i major $tag); part="major";;
     *#minor* ) new=$(semver -i minor $tag); part="minor";;
     *#patch* ) new=$(semver -i patch $tag); part="patch";;
     * ) 
         if [ "$default_semvar_bump" == "none" ]; then
-            echo "Default bump was set to none. Skipping..."; exit 0 
+            echo "BUMP_TYPE not matching any of {'#major', '#minor', '#patch'} and no default bump type provided. Failing"; exit 1
         else 
             new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
         fi 
