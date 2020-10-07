@@ -53,7 +53,7 @@ case "$tag_context" in
         tag=$(git tag --list --merged HEAD --sort=-v:refname | grep -E "^v?[0-9]+.[0-9]+.[0-9]+$" | head -n1)
         pre_tag=$(git tag --list --merged HEAD --sort=-v:refname | grep -E "^v?[0-9]+.[0-9]+.[0-9]+(-$suffix.[0-9]+)?$" | head -n1)
         ;;
-    * ) echo "Unrecognised context"; exit 1;;
+    * ) echo "Unrecognised context"; echo ::set-output name=exit_code::1; exit 1;;
 esac
 
 # if there are none, start tags at INITIAL_VERSION which defaults to 0.0.0
@@ -72,6 +72,7 @@ commit=$(git rev-parse HEAD)
 if [ "$tag_commit" == "$commit" ]; then
     echo "No new commits since previous tag. Skipping..."
     echo ::set-output name=tag::$tag
+    echo ::set-output name=exit_code::1
     exit 1
 fi
 
@@ -81,7 +82,7 @@ case "$bump_type" in
     *#patch* ) new=$(semver -i patch $tag); part="patch";;
     * ) 
         if [ "$default_semvar_bump" == "none" ]; then
-            echo "BUMP_TYPE not matching any of {'#major', '#minor', '#patch'} and no default bump type provided. Failing"; exit 1
+            echo "BUMP_TYPE not matching any of {'#major', '#minor', '#patch'} and no default bump type provided. Failing"; echo ::set-output name=exit_code::1; exit 1
         else 
             new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
         fi 
@@ -130,6 +131,7 @@ echo ::set-output name=part::$part
 if $dryrun
 then
     echo ::set-output name=tag::$tag
+    echo ::set-output name=exit_code::0
     exit 0
 fi 
 
@@ -161,8 +163,10 @@ git_ref_posted=$( echo "${git_refs_response}" | jq .ref | tr -d '"' )
 
 echo "::debug::${git_refs_response}"
 if [ "${git_ref_posted}" = "refs/tags/${new}" ]; then
+  echo ::set-output name=exit_code::0
   exit 0
 else
   echo "::error::Tag was not created properly."
+  echo ::set-output name=exit_code::1
   exit 1
 fi
