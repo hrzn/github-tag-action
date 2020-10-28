@@ -80,7 +80,7 @@ case "$bump_type" in
     *#minor* ) new=$(semver -i minor $tag); part="minor";;
     *#patch* ) new=$(semver -i patch $tag); part="patch";;
     * ) 
-        if [ "$default_semvar_bump" == "none" ]; then
+        if [ "$default_semvar_bump" == "none" ] && [ -z $custom_tag ]; then
             echo "BUMP_TYPE not matching any of {'#major', '#minor', '#patch'} and no default bump type provided. Failing"; exit 1
         else 
             new=$(semver -i "${default_semvar_bump}" $tag); part=$default_semvar_bump 
