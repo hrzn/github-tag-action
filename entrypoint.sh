@@ -2,6 +2,9 @@
 
 set -o pipefail
 
+# see: https://github.com/repo-sync/pull-request/issues/84
+git config --global --add safe.directory /github/workspace
+
 # config
 default_semvar_bump=${DEFAULT_BUMP:-none}
 with_v=${WITH_V:-false}
